@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>追剧学德语</title>
+<style>
+  :root{
+    --bg: #12141a;
+    --panel: #1b1e27;
+    --panel2: #232733;
+    --border: #2f3444;
+    --text: #e8e9ee;
+    --text-dim: #9aa0b0;
+    --accent: #ffb648;
+    --accent2: #5fb0ff;
+    --good: #6bcf8e;
+    --bad: #ff6b6b;
+    --hl-bg: rgba(255,182,72,0.22);
+    --hl-border: rgba(255,182,72,0.85);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height:1.5;
+  }
+  header{
+    padding:14px 20px; background:var(--panel); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  header h1{ font-size:16px; margin:0; font-weight:600; color:var(--accent); white-space:nowrap;}
+  header .sub{ font-size:12px; color:var(--text-dim);}
+  .filebar{ display:flex; align-items:center; gap:10px; margin-left:auto; flex-wrap:wrap;}
+  button, .btn{
+    background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px;
+    transition:.15s;
+  }
+  button:hover, .btn:hover{ border-color:var(--accent); color:var(--accent); }
+  button.primary{ background:var(--accent); color:#1a1200; border-color:var(--accent); font-weight:600;}
+  button.primary:hover{ filter:brightness(1.08); color:#1a1200;}
+  input[type=file]{ display:none; }
+  select#episodeSelect{ background:var(--panel2); color:var(--text); border:1px solid var(--border); padding:8px 10px; border-radius:8px; font-size:13px; max-width:260px;}
+
+  nav.tabs{
+    display:flex; gap:4px; padding:0 20px; background:var(--panel);
+    border-bottom:1px solid var(--border); position:sticky; top:0; z-index:20;
+  }
+  nav.tabs button{
+    background:transparent; border:none; border-bottom:2px solid transparent;
+    border-radius:0; padding:12px 16px; font-size:14px; color:var(--text-dim);
+  }
+  nav.tabs button.active{ color:var(--accent); border-bottom-color:var(--accent); font-weight:600;}
+
+  main{ max-width:min(1800px, 96vw); margin:0 auto; padding:20px; }
+  section.view{ display:none; }
+  section.view.active{ display:block; }
+
+  /* --- Player --- */
+  .player-wrap{ display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;}
+  .video-col{ flex:1 1 760px; min-width:320px; }
+  .video-shell{ position:relative; background:#000; border-radius:12px; overflow:hidden; }
+  video{ width:100%; display:block; max-height:82vh; background:#000;}
+  .video-shell:fullscreen{ display:flex; align-items:center; justify-content:center; border-radius:0; }
+  .video-shell:fullscreen video{ width:auto; height:100%; max-height:100%; max-width:100%; }
+  .video-shell:fullscreen .subtitle-overlay{ bottom:6%; }
+  .video-shell:fullscreen .subtitle-box{ font-size:clamp(20px,3vw,34px); }
+  .empty-video{
+    aspect-ratio:16/9; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; color:var(--text-dim); border:2px dashed var(--border); border-radius:12px; padding:40px;
+    text-align:center;
+  }
+  .subtitle-overlay{
+    position:absolute; left:0; right:0; bottom:8%; display:flex; justify-content:center;
+    pointer-events:none; padding:0 4%;
+  }
+  .subtitle-box{
+    pointer-events:auto; background:rgba(10,10,14,0.72); backdrop-filter:blur(2px);
+    padding:10px 18px; border-radius:10px; font-size:clamp(15px,2.4vw,22px); text-align:center;
+    max-width:100%; line-height:1.5;
+  }
+  .subtitle-box .speaker{ color:var(--accent2); font-size:0.7em; display:block; margin-bottom:2px;}
+  .subtitle-box .zh-line{
+    display:none; margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.18);
+    font-size:0.68em; color:#ffe3ad; font-weight:400;
+  }
+  .subtitle-box.paused .zh-line{ display:block; }
+  .vocab-hl{
+    color:#fff; background:var(--hl-bg); border-bottom:2px solid var(--hl-border);
+    border-radius:3px; padding:0 2px; cursor:pointer;
+  }
+  .vocab-hl:hover{ background:rgba(255,182,72,0.4); }
+  .controls-row{ display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap;}
+  .controls-row .grow{ flex:1; }
+  .side-col{ flex:0 0 320px; min-width:280px; }
+
+  .card{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:16px;}
+  .card h3{ margin:0 0 10px; font-size:14px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em;}
+
+  .detail-panel .term{ font-size:19px; font-weight:700; color:var(--accent); margin-bottom:2px;}
+  .detail-panel .meta{ font-size:12px; color:var(--text-dim); margin-bottom:10px;}
+  .detail-panel .meaning{ font-size:16px; margin-bottom:10px;}
+  .detail-panel .example{ background:var(--panel2); border-radius:8px; padding:10px 12px; margin-bottom:8px; font-size:13.5px;}
+  .detail-panel .example .de{ font-style:italic; margin-bottom:4px;}
+  .detail-panel .example .zh{ color:var(--text-dim);}
+  .detail-panel .note{ font-size:13px; color:var(--text-dim); border-top:1px dashed var(--border); padding-top:8px; margin-top:8px;}
+  .detail-panel .placeholder{ color:var(--text-dim); font-size:13px; text-align:center; padding:30px 10px;}
+  .mark-btn{ margin-top:10px; width:100%; }
+  .mark-btn.known{ background:var(--good); color:#062; border-color:var(--good); }
+  .speak-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; padding:0; border-radius:50%; font-size:14px;
+    background:var(--panel2); border:1px solid var(--border); color:var(--accent2);
+    cursor:pointer; vertical-align:middle; margin-left:8px; flex:none;
+  }
+  .speak-btn:hover{ border-color:var(--accent2); background:rgba(95,176,255,0.15);}
+  .speak-btn.small{ width:22px; height:22px; font-size:12px; margin-left:6px;}
+  .speak-btn.playing{ animation:pulse 0.8s infinite; }
+  @keyframes pulse{ 0%{opacity:1;} 50%{opacity:.4;} 100%{opacity:1;} }
+  .term-row{ display:flex; align-items:center; flex-wrap:wrap; }
+  .example .de-row{ display:flex; align-items:center; }
+  .vmini-row{ display:flex; align-items:center; justify-content:space-between; gap:4px; }
+
+  .cue-vocab-list{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;}
+  .chip{ background:var(--panel2); border:1px solid var(--border); border-radius:20px; padding:4px 10px; font-size:12.5px; cursor:pointer;}
+  .chip:hover{ border-color:var(--accent); color:var(--accent);}
+  .chip.known{ opacity:.5; text-decoration:line-through;}
+
+  /* --- Summary --- */
+  .synopsis{ font-size:14.5px; line-height:1.9; max-width:900px; }
+  table.phrases{ width:100%; border-collapse:collapse; margin-top:8px;}
+  table.phrases td{ padding:8px 6px; border-bottom:1px solid var(--border); font-size:14px; vertical-align:top;}
+  table.phrases td.de{ color:var(--accent); font-weight:600; width:42%;}
+  .vocab-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:10px; margin-top:10px;}
+  .vocab-mini{ background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; cursor:pointer;}
+  .vocab-mini:hover{ border-color:var(--accent);}
+  .vocab-mini .t{ font-weight:700; color:var(--accent); font-size:14px;}
+  .vocab-mini .m{ font-size:13px; color:var(--text-dim); margin-top:2px;}
+  .vocab-mini.known{ opacity:.45; }
+  .filter-row{ display:flex; gap:10px; margin-bottom:6px; align-items:center; flex-wrap:wrap;}
+  .filter-row input[type=text]{ background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:7px 10px; border-radius:8px; font-size:13px;}
+  .stat{ font-size:12.5px; color:var(--text-dim);}
+
+  /* --- Scenes --- */
+  .scene-item{ display:flex; justify-content:space-between; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--border);}
+  .scene-item:last-child{ border-bottom:none;}
+  .scene-title{ font-weight:600; margin-bottom:4px;}
+  .scene-note{ font-size:13px; color:var(--text-dim);}
+  .scene-time{ font-size:12px; color:var(--accent2); }
+
+  /* --- Quiz --- */
+  .q-card{ margin-bottom:18px; }
+  .q-title{ font-weight:600; margin-bottom:10px; }
+  .opt{ display:block; width:100%; text-align:left; margin-bottom:8px; padding:10px 12px; }
+  .opt.correct{ border-color:var(--good); color:var(--good);}
+  .opt.wrong{ border-color:var(--bad); color:var(--bad);}
+  .fill-row{ display:flex; gap:8px; margin-bottom:8px;}
+  .fill-row input[type=text]{ flex:1; background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:8px;}
+  .fill-row input[type=text].correct{ border-color:var(--good); color:var(--good);}
+  .fill-row input[type=text].wrong{ border-color:var(--bad); color:var(--bad);}
+  .fill-result{ font-size:13px; margin-bottom:8px; }
+  .fill-result.correct{ color:var(--good); }
+  .fill-result.wrong{ color:var(--bad); }
+  .expl{ font-size:13px; color:var(--text-dim); margin-top:6px; display:none; padding:8px 10px; background:var(--panel2); border-radius:8px;}
+  .expl.show{ display:block; }
+  .quiz-score{ font-size:14px; margin-bottom:16px; color:var(--accent);}
+
+  .progress-bar-wrap{ height:4px; background:var(--panel2); border-radius:2px; overflow:hidden; margin-top:8px;}
+  .progress-bar{ height:100%; background:var(--accent); width:0%; }
+
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--text-dim); }
+
+  ::-webkit-scrollbar{ width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎬 追剧学德语</h1>
+  <select id="episodeSelect"></select>
+  <div class="filebar">
+    <span class="stat" id="ttsStatus">🔊 加载德语发音中…</span>
+    <label class="stat" style="display:flex; align-items:center; gap:6px;">
+      语速
+      <select id="ttsRate" class="btn" style="padding:5px 8px;">
+        <option value="0.7">慢</option>
+        <option value="0.85" selected>正常</option>
+        <option value="1">快</option>
+      </select>
+    </label>
+    <span class="stat" id="videoStatus">未选择视频文件</span>
+    <button class="btn" id="pickVideoBtn">选择本地视频文件</button>
+    <input type="file" id="videoInput" accept="video/*">
+  </div>
+</header>
+
+<div id="demoNotice" style="display:none; background:#3a2f12; color:#ffd88a; border-bottom:1px solid var(--border); padding:10px 20px; font-size:13px;">
+  ⚠️ 没有找到 <code>manifest.js</code>，当前显示的是随附的示例数据（<code>manifest.example.js</code> / <code>data/example-episode.js</code>）。
+  正式使用请把 <code>manifest.example.js</code> 复制为 <code>manifest.js</code> 并按 README 的 Quick start 准备你自己的剧集数据。
+</div>
+
+<nav class="tabs">
+  <button data-tab="player" class="active">▶ 播放</button>
+  <button data-tab="summary">📋 总结 & 生词表</button>
+  <button data-tab="scenes">🎬 关键片段</button>
+  <button data-tab="quiz">✏️ 练习题</button>
+</nav>
+
+<main>
+
+  <!-- PLAYER -->
+  <section class="view active" id="view-player">
+    <div class="player-wrap">
+      <div class="video-col">
+        <div class="video-shell" id="videoShell">
+          <div class="empty-video" id="emptyVideo">
+            <div style="font-size:36px;">🎬</div>
+            <div id="emptyVideoHint">还没有加载视频。请点击右上角「选择本地视频文件」，选取本集对应的视频文件。</div>
+            <div class="stat">视频只会在你的浏览器本地读取和播放，不会上传到任何服务器。</div>
+          </div>
+          <video id="video" controls controlsList="nofullscreen" style="display:none;"></video>
+          <div class="subtitle-overlay" id="subtitleOverlay" style="display:none;">
+            <div class="subtitle-box" id="subtitleBox"></div>
+          </div>
+        </div>
+        <div class="controls-row">
+          <button id="backBtn">⏪ 5s</button>
+          <button id="playPauseBtn">▶ / ⏸</button>
+          <button id="fwdBtn">5s ⏩</button>
+          <button id="fullscreenBtn">⛶ 全屏</button>
+          <span class="grow"></span>
+          <label class="stat" style="display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="autoPauseToggle"> 词汇高亮时自动暂停
+          </label>
+        </div>
+        <div class="stat" id="timeDisplay" style="margin-top:6px;">00:00 / 00:00</div>
+      </div>
+
+      <div class="side-col">
+        <div class="card detail-panel" id="detailPanel">
+          <h3>词汇 / 语法详情</h3>
+          <div id="detailContent">
+            <div class="placeholder">暂停播放，或点击字幕中高亮的黄色词汇，即可在这里看到释义、例句和语法说明。</div>
+          </div>
+        </div>
+        <div class="card" id="cueVocabCard" style="display:none;">
+          <h3>本句涉及的词汇</h3>
+          <div class="cue-vocab-list" id="cueVocabList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="view" id="view-summary">
+    <div class="card">
+      <h3>剧情梗概</h3>
+      <div class="synopsis" id="synopsisText"></div>
+    </div>
+    <div class="card">
+      <h3>核心句型 / 惯用语</h3>
+      <table class="phrases" id="phrasesTable"></table>
+    </div>
+    <div class="card">
+      <h3>本集生词表（<span id="vocabCount">0</span> 个，已掌握 <span id="knownCount">0</span> 个）</h3>
+      <div class="filter-row">
+        <input type="text" id="vocabSearch" placeholder="搜索德语单词或中文释义…">
+        <label class="stat"><input type="checkbox" id="hideKnown"> 隐藏已掌握</label>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="vocabProgressBar"></div></div>
+      <div class="vocab-grid" id="vocabGrid"></div>
+    </div>
+    <div class="card">
+      <h3>语法点一览</h3>
+      <div id="grammarList"></div>
+    </div>
+  </section>
+
+  <!-- SCENES -->
+  <section class="view" id="view-scenes">
+    <div class="card">
+      <h3>关键段落回放</h3>
+      <div id="sceneList"></div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="view" id="view-quiz">
+    <div class="card">
+      <div class="quiz-score" id="quizScore"></div>
+      <div id="quizList"></div>
+      <button class="primary" id="quizResetBtn">重新开始练习</button>
+    </div>
+  </section>
+
+</main>
+
+<script src="manifest.js"></script>
+<script>
+/* =====================================================================
+   Generic multi-episode German-subtitle learning player.
+   This file contains NO show-specific content — all episode content
+   (subtitles, vocab, grammar, quiz, etc.) lives in data/<episode-id>.js
+   files, one per episode, listed in manifest.js. See README.md for the
+   data schema and how to generate your own episode files.
+   ===================================================================== */
+
+let DATA = null, CUES = [], VOCAB = [], GRAMMAR = [], SUMMARY = null, SCENES = [], QUIZ = [];
+let VOCAB_BY_ID = {};
+let wordMap = {};
+let phraseMatches = [];
+let PROGRESS = {known:{}, quiz:{}};
+let CURRENT_EPISODE = null; // manifest entry
+let currentScriptEl = null;
+
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ---------- Episode picker ---------- */
+const episodeSelect = document.getElementById('episodeSelect');
+function populateEpisodeSelect(){
+  episodeSelect.innerHTML = '';
+  if(!window.SERIES_MANIFEST || !window.SERIES_MANIFEST.length){
+    const opt = document.createElement('option');
+    opt.textContent = '未找到 manifest.js（没有可用的剧集）';
+    episodeSelect.appendChild(opt);
+    return;
+  }
+  const seasons = {};
+  window.SERIES_MANIFEST.forEach(e=>{
+    (seasons[e.season] = seasons[e.season] || []).push(e);
+  });
+  Object.keys(seasons).sort((a,b)=>a-b).forEach(season=>{
+    const group = document.createElement('optgroup');
+    group.label = `第 ${season} 季`;
+    seasons[season].forEach(e=>{
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = e.title || e.id;
+      group.appendChild(opt);
+    });
+    episodeSelect.appendChild(group);
+  });
+}
+episodeSelect.addEventListener('change', ()=> switchEpisode(episodeSelect.value));
+
+function switchEpisode(epId){
+  const entry = (window.SERIES_MANIFEST || []).find(e=>e.id === epId);
+  if(!entry) return;
+  episodeSelect.value = epId;
+  if(currentScriptEl) currentScriptEl.remove();
+  window.APP_DATA = null;
+  const s = document.createElement('script');
+  s.src = entry.file;
+  s.onload = ()=>{
+    if(!window.APP_DATA){
+      alert('数据文件加载了，但没有设置 window.APP_DATA：' + entry.file);
+      return;
+    }
+    initEpisode(window.APP_DATA, entry);
+  };
+  s.onerror = ()=>{
+    alert('找不到数据文件：' + entry.file + '\n请确认该文件已经放在 data/ 文件夹里，并且和 index.html 在同一个项目目录下。');
+  };
+  document.head.appendChild(s);
+  currentScriptEl = s;
+}
+
+function initEpisode(data, entry){
+  CURRENT_EPISODE = entry;
+  DATA = data;
+  CUES = data.cues || [];
+  VOCAB = data.vocab || [];
+  GRAMMAR = data.grammar || [];
+  SUMMARY = data.summary || {synopsis_zh:'', key_phrases:[]};
+  SCENES = data.keyScenes || [];
+  QUIZ = data.quiz || [];
+
+  VOCAB_BY_ID = {};
+  VOCAB.forEach(v => VOCAB_BY_ID[v.id] = v);
+
+  wordMap = {};
+  phraseMatches = [];
+  VOCAB.forEach(v=>{
+    (v.match || []).forEach(m=>{
+      if(m.includes(' ')) phraseMatches.push({phrase:m.toLowerCase(), id:v.id});
+      else wordMap[m.toLowerCase()] = v.id;
+    });
+  });
+  phraseMatches.sort((a,b)=> b.phrase.length - a.phrase.length);
+
+  PROGRESS = loadProgress(entry.id);
+
+  // reset player state
+  currentCue = null;
+  lastCueId = null;
+  lastAutoPausedIdx = null;
+  pendingResumeMs = null;
+  videoBaseLabel = '';
+  resumeLabel = '';
+  lastSavedPositionAt = 0;
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+  video.style.display = 'none';
+  emptyVideo.style.display = 'flex';
+  document.getElementById('emptyVideoHint').textContent =
+    `还没有加载视频。请点击右上角「选择本地视频文件」，选取「${entry.title || entry.id}」对应的本地视频文件。`;
+  document.getElementById('subtitleOverlay').style.display = 'none';
+  document.getElementById('videoStatus').textContent = '未选择视频文件';
+  document.getElementById('videoStatus').style.color = '';
+  subtitleBox.innerHTML = '';
+  subtitleBox.classList.remove('paused');
+  cueVocabCard.style.display = 'none';
+  detailContent.innerHTML = '<div class="placeholder">暂停播放，或点击字幕中高亮的黄色词汇，即可在这里看到释义、例句和语法说明。</div>';
+  document.getElementById('timeDisplay').textContent = '00:00 / 00:00';
+
+  renderSummaryTab();
+  renderScenesTab();
+  renderQuiz();
+}
+
+/* ---------- localStorage progress (per episode) ---------- */
+function storageKeyFor(epId){ return `lernplayer_progress_${epId}_v1`; }
+function loadProgress(epId){
+  try{
+    const raw = localStorage.getItem(storageKeyFor(epId));
+    return raw ? JSON.parse(raw) : {known:{}, quiz:{}};
+  }catch(e){ return {known:{}, quiz:{}}; }
+}
+function saveProgress(p){
+  if(!CURRENT_EPISODE) return;
+  try{ localStorage.setItem(storageKeyFor(CURRENT_EPISODE.id), JSON.stringify(p)); }catch(e){}
+}
+
+/* ---------- German text-to-speech (Web Speech API, runs fully locally in the browser) ---------- */
+const TTS = { voice: null, supported: 'speechSynthesis' in window, rate: 0.85 };
+document.getElementById('ttsRate').addEventListener('change', (e)=>{ TTS.rate = parseFloat(e.target.value); });
+
+function pickGermanVoice(){
+  if(!TTS.supported) return;
+  const voices = window.speechSynthesis.getVoices();
+  if(!voices.length) return;
+  TTS.voice = voices.find(v => v.lang === 'de-DE') ||
+              voices.find(v => v.lang && v.lang.toLowerCase().startsWith('de')) ||
+              null;
+  const statusEl = document.getElementById('ttsStatus');
+  if(statusEl){
+    statusEl.textContent = TTS.voice
+      ? `🔊 发音：${TTS.voice.name}`
+      : '⚠️ 未找到德语语音包（仍可点朗读，会用默认语音）';
+  }
+}
+if(TTS.supported){
+  pickGermanVoice();
+  window.speechSynthesis.onvoiceschanged = pickGermanVoice;
+} else {
+  document.getElementById('ttsStatus').textContent = '⚠️ 当前浏览器不支持语音朗读';
+}
+
+function speakGerman(text, btnEl){
+  if(!TTS.supported || !text) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'de-DE';
+  if(TTS.voice) utter.voice = TTS.voice;
+  utter.rate = TTS.rate;
+  if(btnEl){
+    btnEl.classList.add('playing');
+    utter.onend = () => btnEl.classList.remove('playing');
+    utter.onerror = () => btnEl.classList.remove('playing');
+  }
+  window.speechSynthesis.speak(utter);
+}
+function speakBtnHtml(text, size){
+  const cls = size === 'small' ? 'speak-btn small' : 'speak-btn';
+  return `<button class="${cls}" type="button" data-speak="${escapeHtml(text)}" title="朗读">🔊</button>`;
+}
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-speak]');
+  if(btn){
+    e.stopPropagation();
+    speakGerman(btn.dataset.speak, btn);
+  }
+});
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section.view').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab === 'summary') renderVocabGrid();
+  });
+});
+
+/* ---------- Video loading ---------- */
+const video = document.getElementById('video');
+const emptyVideo = document.getElementById('emptyVideo');
+const videoInput = document.getElementById('videoInput');
+document.getElementById('pickVideoBtn').addEventListener('click', ()=> videoInput.click());
+let pendingResumeMs = null;
+let videoBaseLabel = '';
+let resumeLabel = '';
+function refreshVideoStatus(extra){
+  document.getElementById('videoStatus').textContent = videoBaseLabel + resumeLabel + (extra || '');
+}
+videoInput.addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const url = URL.createObjectURL(file);
+  video.muted = false;
+  video.volume = 1;
+  pendingResumeMs = (PROGRESS.lastPositionMs && PROGRESS.lastPositionMs > 3000) ? PROGRESS.lastPositionMs : null;
+  video.src = url;
+  video.style.display = 'block';
+  emptyVideo.style.display = 'none';
+  document.getElementById('subtitleOverlay').style.display = 'flex';
+  videoBaseLabel = '已加载：' + file.name;
+  resumeLabel = '';
+  document.getElementById('videoStatus').style.color = '';
+  refreshVideoStatus('（检测音轨中…）');
+});
+
+// resume from where we last left off in this episode, if we have a saved position
+video.addEventListener('loadedmetadata', ()=>{
+  if(pendingResumeMs != null){
+    const seekTo = Math.min(pendingResumeMs / 1000, Math.max(0, (video.duration || Infinity) - 2));
+    video.currentTime = seekTo;
+    resumeLabel = `（已跳转到上次播放位置 ${fmtTime(seekTo)}）`;
+    refreshVideoStatus('（检测音轨中…）');
+    pendingResumeMs = null;
+  }
+});
+
+video.addEventListener('loadedmetadata', ()=>{
+  setTimeout(()=>{
+    let hasAudio = null;
+    if(video.audioTracks && typeof video.audioTracks.length === 'number'){
+      hasAudio = video.audioTracks.length > 0;
+    } else if('mozHasAudio' in video){
+      hasAudio = video.mozHasAudio;
+    } else if('webkitAudioDecodedByteCount' in video){
+      hasAudio = video.webkitAudioDecodedByteCount > 0;
+    }
+    const statusEl = document.getElementById('videoStatus');
+    if(hasAudio === false){
+      refreshVideoStatus('（⚠️ 没有检测到可解码的音频轨道——很可能是音频编码格式不被浏览器支持，比如 AC3/DTS/EAC3。建议用 ffmpeg 把音频转成 AAC 后再试。）');
+      statusEl.style.color = 'var(--bad)';
+    } else if(hasAudio === true){
+      refreshVideoStatus('（✓ 检测到音频轨道，如果仍然没声音，请检查系统音量/浏览器静音图标）');
+      statusEl.style.color = '';
+    } else {
+      refreshVideoStatus('（无法自动判断音轨状态）');
+      statusEl.style.color = '';
+    }
+  }, 400);
+});
+video.addEventListener('error', ()=>{
+  const statusEl = document.getElementById('videoStatus');
+  statusEl.textContent = '⚠️ 视频加载出错，可能是容器格式不被浏览器直接支持，建议先用 ffmpeg 转成标准 mp4 (H.264+AAC)。';
+  statusEl.style.color = 'var(--bad)';
+});
+
+/* ---------- Vocab matching ---------- */
+function highlightText(text){
+  const vocabIds = new Set();
+  let ranges = [];
+  const lower = text.toLowerCase();
+  phraseMatches.forEach(pm=>{
+    let idx = 0;
+    while(true){
+      const found = lower.indexOf(pm.phrase, idx);
+      if(found === -1) break;
+      const end = found + pm.phrase.length;
+      const overlap = ranges.some(r => !(end<=r.start || found>=r.end));
+      if(!overlap){
+        ranges.push({start:found, end, id:pm.id});
+        vocabIds.add(pm.id);
+      }
+      idx = end;
+    }
+  });
+  ranges.sort((a,b)=>a.start-b.start);
+
+  let html = '';
+  let pos = 0;
+  function processPlain(str){
+    const re = /[A-Za-zÀ-ÖØ-öø-ÿß']+/g;
+    let last = 0; let m;
+    let out = '';
+    while((m = re.exec(str)) !== null){
+      out += escapeHtml(str.slice(last, m.index));
+      const token = m[0];
+      const lowTok = token.toLowerCase();
+      const stripped = lowTok.replace(/^'+|'+$/g,'');
+      const id = wordMap[lowTok] || wordMap[stripped];
+      if(id){
+        vocabIds.add(id);
+        out += `<span class="vocab-hl" data-vid="${id}">${escapeHtml(token)}</span>`;
+      } else {
+        out += escapeHtml(token);
+      }
+      last = m.index + token.length;
+    }
+    out += escapeHtml(str.slice(last));
+    return out;
+  }
+
+  ranges.forEach(r=>{
+    html += processPlain(text.slice(pos, r.start));
+    const seg = text.slice(r.start, r.end);
+    html += `<span class="vocab-hl" data-vid="${r.id}">${escapeHtml(seg)}</span>`;
+    pos = r.end;
+  });
+  html += processPlain(text.slice(pos));
+
+  return {html, vocabIds};
+}
+
+/* ---------- Subtitle sync ---------- */
+const subtitleBox = document.getElementById('subtitleBox');
+const cueVocabCard = document.getElementById('cueVocabCard');
+const cueVocabList = document.getElementById('cueVocabList');
+let currentCue = null;
+let lastAutoPausedIdx = null;
+const autoPauseToggle = document.getElementById('autoPauseToggle');
+
+function findCue(ms){
+  for(const c of CUES){
+    if(c.sfx) continue;
+    if(!c.text || !c.text.trim()) continue;
+    if(ms >= c.start && ms <= c.end) return c;
+  }
+  return null;
+}
+
+function renderCue(cue){
+  currentCue = cue;
+  if(!cue){
+    subtitleBox.innerHTML = '';
+    cueVocabCard.style.display = 'none';
+    return;
+  }
+  const {html, vocabIds} = highlightText(cue.text);
+  let inner = '';
+  if(cue.speaker) inner += `<span class="speaker">${escapeHtml(cue.speaker)}</span>`;
+  inner += html;
+  if(cue.zh) inner += `<div class="zh-line">${escapeHtml(cue.zh)}</div>`;
+  subtitleBox.innerHTML = inner;
+  subtitleBox.classList.toggle('paused', video.paused);
+
+  if(vocabIds.size > 0){
+    cueVocabCard.style.display = 'block';
+    cueVocabList.innerHTML = '';
+    vocabIds.forEach(id=>{
+      const v = VOCAB_BY_ID[id];
+      if(!v) return;
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (PROGRESS.known[id] ? ' known' : '');
+      chip.textContent = v.term;
+      chip.addEventListener('click', ()=> showVocabDetail(id));
+      cueVocabList.appendChild(chip);
+    });
+  } else {
+    cueVocabCard.style.display = 'none';
+  }
+
+  if(vocabIds.size > 0 && autoPauseToggle.checked && !video.paused && cue.idx !== lastAutoPausedIdx){
+    lastAutoPausedIdx = cue.idx;
+    video.pause();
+  }
+}
+
+document.getElementById('subtitleBox').addEventListener('click', (e)=>{
+  const t = e.target.closest('.vocab-hl');
+  if(t){ showVocabDetail(t.dataset.vid); }
+});
+
+let lastCueId = null;
+let lastSavedPositionAt = 0;
+function savePlaybackPosition(){
+  if(!CURRENT_EPISODE) return;
+  if(!video.duration || isNaN(video.currentTime)) return;
+  PROGRESS.lastPositionMs = Math.round(video.currentTime * 1000);
+  saveProgress(PROGRESS);
+}
+video.addEventListener('timeupdate', ()=>{
+  const ms = video.currentTime * 1000;
+  const cue = findCue(ms);
+  const cueId = cue ? cue.idx : null;
+  if(cueId !== lastCueId){
+    lastCueId = cueId;
+    renderCue(cue);
+  }
+  const dur = video.duration || 0;
+  document.getElementById('timeDisplay').textContent = fmtTime(video.currentTime) + ' / ' + fmtTime(dur);
+
+  const now = Date.now();
+  if(now - lastSavedPositionAt > 3000){
+    lastSavedPositionAt = now;
+    savePlaybackPosition();
+  }
+});
+
+window.addEventListener('beforeunload', savePlaybackPosition);
+
+video.addEventListener('pause', ()=>{
+  savePlaybackPosition();
+  subtitleBox.classList.add('paused');
+  if(currentCue){
+    const {vocabIds} = highlightText(currentCue.text);
+    if(vocabIds.size > 0){
+      showVocabDetail([...vocabIds][0]);
+    } else if(currentCue.zh){
+      detailContent.innerHTML = `
+        <div class="meta">本句中文翻译</div>
+        <div class="example">
+          <div class="de-row"><div class="de">"${escapeHtml(currentCue.text)}"</div>${speakBtnHtml(currentCue.text, 'small')}</div>
+          <div class="zh">${escapeHtml(currentCue.zh)}</div>
+        </div>
+      `;
+    }
+  }
+  const gp = grammarPointForCue(currentCue ? currentCue.idx : null);
+  if(gp) appendGrammarToDetail(gp);
+});
+video.addEventListener('play', ()=>{
+  subtitleBox.classList.remove('paused');
+});
+
+function grammarPointForCue(idx){
+  if(idx == null) return null;
+  return GRAMMAR.find(g => Math.abs(g.cue_idx - idx) <= 3) || null;
+}
+
+function fmtTime(s){
+  if(!isFinite(s)) return '00:00';
+  const m = Math.floor(s/60).toString().padStart(2,'0');
+  const sec = Math.floor(s%60).toString().padStart(2,'0');
+  return `${m}:${sec}`;
+}
+
+document.getElementById('backBtn').addEventListener('click', ()=> video.currentTime = Math.max(0, video.currentTime-5));
+document.getElementById('fwdBtn').addEventListener('click', ()=> video.currentTime = video.currentTime+5);
+document.getElementById('playPauseBtn').addEventListener('click', ()=> video.paused ? video.play() : video.pause());
+
+/* 全屏时把字幕一起带进全屏：全屏的是包含 video + 字幕层的 videoShell 容器，而不是 video 元素本身
+   （浏览器原生的"只让 video 全屏"会把同级的字幕层挡在外面，所以这里用自定义按钮 + 隐藏原生全屏按钮）。 */
+const videoShellEl = document.getElementById('videoShell');
+function enterShellFullscreen(){
+  const fn = videoShellEl.requestFullscreen || videoShellEl.webkitRequestFullscreen;
+  if(!fn) return;
+  Promise.resolve(fn.call(videoShellEl)).catch(()=>{});
+}
+document.getElementById('fullscreenBtn').addEventListener('click', ()=>{
+  if(document.fullscreenElement){
+    document.exitFullscreen().catch(()=>{});
+  } else {
+    enterShellFullscreen();
+  }
+});
+document.addEventListener('fullscreenchange', ()=>{
+  // 兜底：如果由于浏览器默认行为（比如双击视频）导致只有 video 本身进入了全屏，
+  // 立即退出并改为让 videoShell 整体全屏，避免字幕被漏在外面。
+  if(document.fullscreenElement === video){
+    document.exitFullscreen().then(enterShellFullscreen).catch(()=>{});
+  }
+});
+
+/* ---------- Detail panel ---------- */
+const detailContent = document.getElementById('detailContent');
+function showVocabDetail(id){
+  const v = VOCAB_BY_ID[id];
+  if(!v) return;
+  const known = !!PROGRESS.known[id];
+  const termSpeakText = v.term.replace(/^(der|die|das)\s+/i,'').split(' / ')[0];
+  detailContent.innerHTML = `
+    <div class="term-row">
+      <div class="term">${escapeHtml(v.term)}</div>
+      ${speakBtnHtml(termSpeakText)}
+    </div>
+    <div class="meta">${escapeHtml(v.pos)} · ${escapeHtml(v.level)}</div>
+    <div class="meaning">${escapeHtml(v.meaning_zh)}</div>
+    <div class="example">
+      <div class="de-row"><div class="de">"${escapeHtml(v.example_de)}"</div>${speakBtnHtml(v.example_de, 'small')}</div>
+      <div class="zh">${escapeHtml(v.example_zh)}</div>
+    </div>
+    ${v.note ? `<div class="note">💡 ${escapeHtml(v.note)}</div>` : ''}
+    <button class="mark-btn ${known?'known':''}" id="markKnownBtn">${known ? '✓ 已掌握（点击取消）' : '标记为已掌握'}</button>
+  `;
+  document.getElementById('markKnownBtn').addEventListener('click', ()=>{
+    PROGRESS.known[id] = !PROGRESS.known[id];
+    saveProgress(PROGRESS);
+    showVocabDetail(id);
+    if(currentCue) renderCue(currentCue);
+  });
+}
+function appendGrammarToDetail(gp){
+  const div = document.createElement('div');
+  div.style.marginTop = '14px';
+  div.style.borderTop = '1px dashed var(--border)';
+  div.style.paddingTop = '12px';
+  div.innerHTML = `
+    <div class="term" style="color:var(--accent2); font-size:15px;">📘 语法点：${escapeHtml(gp.title)}</div>
+    <div class="meaning" style="font-size:14px;">${escapeHtml(gp.explain_zh)}</div>
+    <div class="example">
+      <div class="de-row"><div class="de">"${escapeHtml(gp.example_de)}"</div>${speakBtnHtml(gp.example_de, 'small')}</div>
+      <div class="zh">${escapeHtml(gp.example_zh)}</div>
+    </div>
+  `;
+  detailContent.appendChild(div);
+}
+
+/* ---------- Summary tab ---------- */
+const phrasesTable = document.getElementById('phrasesTable');
+const grammarList = document.getElementById('grammarList');
+function renderSummaryTab(){
+  document.getElementById('synopsisText').textContent = SUMMARY.synopsis_zh || '（暂无剧情梗概）';
+
+  phrasesTable.innerHTML = '';
+  (SUMMARY.key_phrases || []).forEach(p=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="de">${escapeHtml(p.de)}${speakBtnHtml(p.de,'small')}</td><td>${escapeHtml(p.zh)}</td>`;
+    phrasesTable.appendChild(tr);
+  });
+
+  grammarList.innerHTML = '';
+  GRAMMAR.forEach(g=>{
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.background = 'var(--panel2)';
+    div.innerHTML = `
+      <div style="color:var(--accent2); font-weight:700; margin-bottom:6px;">${escapeHtml(g.title)} <span class="stat">(${escapeHtml(g.tag)})</span></div>
+      <div style="font-size:14px; margin-bottom:8px;">${escapeHtml(g.explain_zh)}</div>
+      <div class="example"><div class="de-row"><div class="de">"${escapeHtml(g.example_de)}"</div>${speakBtnHtml(g.example_de, 'small')}</div><div class="zh">${escapeHtml(g.example_zh)}</div></div>
+    `;
+    grammarList.appendChild(div);
+  });
+
+  renderVocabGrid();
+}
+
+function renderVocabGrid(){
+  const grid = document.getElementById('vocabGrid');
+  const search = document.getElementById('vocabSearch').value.trim().toLowerCase();
+  const hideKnown = document.getElementById('hideKnown').checked;
+  grid.innerHTML = '';
+  let knownN = 0;
+  VOCAB.forEach(v=>{ if(PROGRESS.known[v.id]) knownN++; });
+  document.getElementById('vocabCount').textContent = VOCAB.length;
+  document.getElementById('knownCount').textContent = knownN;
+  document.getElementById('vocabProgressBar').style.width = VOCAB.length ? (100*knownN/VOCAB.length).toFixed(1)+'%' : '0%';
+
+  VOCAB.forEach(v=>{
+    const known = !!PROGRESS.known[v.id];
+    if(hideKnown && known) return;
+    if(search && !(v.term.toLowerCase().includes(search) || v.meaning_zh.toLowerCase().includes(search))) return;
+    const el = document.createElement('div');
+    el.className = 'vocab-mini' + (known ? ' known':'');
+    const termSpeakText = v.term.replace(/^(der|die|das)\s+/i,'').split(' / ')[0];
+    el.innerHTML = `<div class="vmini-row"><div class="t">${escapeHtml(v.term)}</div>${speakBtnHtml(termSpeakText,'small')}</div><div class="m">${escapeHtml(v.meaning_zh)}</div>`;
+    el.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-speak]')) return;
+      document.querySelector('nav.tabs button[data-tab="player"]').click();
+      showVocabDetail(v.id);
+    });
+    grid.appendChild(el);
+  });
+}
+document.getElementById('vocabSearch').addEventListener('input', renderVocabGrid);
+document.getElementById('hideKnown').addEventListener('change', renderVocabGrid);
+
+/* ---------- Scenes tab ---------- */
+const sceneList = document.getElementById('sceneList');
+function renderScenesTab(){
+  sceneList.innerHTML = '';
+  SCENES.forEach(s=>{
+    const div = document.createElement('div');
+    div.className = 'scene-item';
+    div.innerHTML = `
+      <div>
+        <div class="scene-title">${escapeHtml(s.title)}</div>
+        <div class="scene-note">${escapeHtml(s.note_zh)}</div>
+        <div class="scene-time">${fmtTime(s.start/1000)} – ${fmtTime(s.end/1000)}</div>
+      </div>
+      <button class="btn">▶ 播放此段</button>
+    `;
+    div.querySelector('button').addEventListener('click', ()=>{
+      if(!video.src){ alert('请先选择本地视频文件。'); return; }
+      document.querySelector('nav.tabs button[data-tab="player"]').click();
+      video.currentTime = s.start/1000;
+      video.play();
+    });
+    sceneList.appendChild(div);
+  });
+}
+
+/* ---------- Quiz tab ---------- */
+const quizList = document.getElementById('quizList');
+function renderQuiz(){
+  quizList.innerHTML = '';
+  let answered = 0, correct = 0;
+  QUIZ.forEach((q, i)=>{
+    const saved = PROGRESS.quiz[i];
+    if(saved !== undefined){ answered++; if(saved.correct) correct++; }
+    const card = document.createElement('div');
+    card.className = 'q-card card';
+    card.style.background = 'var(--panel2)';
+    let bodyHtml = `<div class="q-title">${i+1}. ${escapeHtml(q.q)}</div>`;
+    if(q.type === 'mc'){
+      q.options.forEach((opt, oi)=>{
+        let cls = 'opt btn';
+        if(saved !== undefined){
+          if(oi === q.answer) cls += ' correct';
+          else if(oi === saved.choice) cls += ' wrong';
+        }
+        bodyHtml += `<button class="${cls}" data-oi="${oi}">${escapeHtml(opt)}</button>`;
+      });
+    } else if(q.type === 'fill'){
+      const inputCls = saved !== undefined ? (saved.correct ? ' correct' : ' wrong') : '';
+      bodyHtml += `<div class="fill-row"><input type="text" class="${inputCls.trim()}" placeholder="在此输入答案…" ${saved!==undefined?'disabled':''} value="${saved!==undefined? escapeHtml(saved.text||''):''}"><button class="btn submit-fill" ${saved!==undefined?'disabled':''}>提交</button></div>`;
+      if(saved !== undefined){
+        const correctAnswer = q.answer_text.split('/')[0].trim();
+        bodyHtml += saved.correct
+          ? `<div class="fill-result correct">✓ 回答正确</div>`
+          : `<div class="fill-result wrong">✗ 回答错误，正确答案：${escapeHtml(correctAnswer)}</div>`;
+      }
+    }
+    bodyHtml += `<div class="expl ${saved!==undefined?'show':''}">💡 ${escapeHtml(q.expl)}</div>`;
+    card.innerHTML = bodyHtml;
+
+    if(q.type === 'mc'){
+      card.querySelectorAll('.opt').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          if(PROGRESS.quiz[i] !== undefined) return;
+          const oi = parseInt(btn.dataset.oi);
+          const isCorrect = oi === q.answer;
+          PROGRESS.quiz[i] = {choice: oi, correct: isCorrect};
+          saveProgress(PROGRESS);
+          renderQuiz();
+        });
+      });
+    } else if(q.type === 'fill'){
+      const submit = card.querySelector('.submit-fill');
+      submit.addEventListener('click', ()=>{
+        if(PROGRESS.quiz[i] !== undefined) return;
+        const input = card.querySelector('input[type=text]');
+        const val = input.value.trim().toLowerCase();
+        const accepted = q.answer_text.toLowerCase().split('/').map(s=>s.trim());
+        const isCorrect = accepted.some(a => val.includes(a));
+        PROGRESS.quiz[i] = {text: input.value, correct: isCorrect};
+        saveProgress(PROGRESS);
+        renderQuiz();
+      });
+    }
+    quizList.appendChild(card);
+  });
+  document.getElementById('quizScore').textContent = `已完成 ${answered} / ${QUIZ.length} 题，答对 ${correct} 题`;
+}
+document.getElementById('quizResetBtn').addEventListener('click', ()=>{
+  if(confirm('确定要清空练习题记录，重新开始吗？')){
+    PROGRESS.quiz = {};
+    saveProgress(PROGRESS);
+    renderQuiz();
+  }
+});
+
+/* ---------- Boot ---------- */
+function bootWithManifest(){
+  populateEpisodeSelect();
+  if(window.SERIES_MANIFEST && window.SERIES_MANIFEST.length){
+    switchEpisode(window.SERIES_MANIFEST[0].id);
+  }
+}
+if(window.SERIES_MANIFEST && window.SERIES_MANIFEST.length){
+  // manifest.js loaded successfully (see the <script src="manifest.js"> tag above).
+  bootWithManifest();
+} else {
+  // No manifest.js yet (e.g. a fresh clone before following the README's Quick start).
+  // Fall back to the bundled example so the page never looks broken/empty out of the box.
+  const fallback = document.createElement('script');
+  fallback.src = 'manifest.example.js';
+  fallback.onload = ()=>{
+    document.getElementById('demoNotice').style.display = 'block';
+    bootWithManifest();
+  };
+  fallback.onerror = ()=>{
+    populateEpisodeSelect();
+  };
+  document.head.appendChild(fallback);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Your real episode manifest and data files stay private — never commit them.
+manifest.js
+data/*.js
+!data/example-episode.js
+
+# Your real cross-episode vocab/grammar tracker stays private too.
+tools/used_vocab_grammar.json
+!tools/used_vocab_grammar.example.json
+
+# Never commit video files.
+*.mp4
+*.mkv
+*.avi
+*.webm
+
+# OS junk
+.DS_Store
