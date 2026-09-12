@@ -68,7 +68,7 @@ ffmpeg -i input.mkv -map 0:v:0 -map 0:a:0 -sn -c:v copy -c:a aac -ac 2 -b:a 192k
 
 **想让 AI 助手第一次就做得更好**，把 [`GENERATING_EPISODE_DATA.md`](GENERATING_EPISODE_DATA.md) 也一起交给它——里面详细展开了上面这五步该怎么做，以及几个容易踩的坑（翻译错位怎么发现、生词难度怎么校准、填空题提示怎么给才够、以及两个用来自动核对质量的脚本：跨集查重用的 [`tools/check_dup.py`](tools/check_dup.py) 和生词高亮校验用的 [`tools/check_highlight.py`](tools/check_highlight.py)）。这些都是做这个项目自己那部剧的私人数据时，一轮一轮改出来的经验，不看这份文档的话，第一版大概率能跑起来，但要达到这个质量还得自己来回纠正好几轮。
 
-如果你用的是 Claude Code，这个仓库还自带了一个对应的 Skill（[`.claude/skills/bingelingo-episode-data/`](.claude/skills/bingelingo-episode-data/SKILL.md)），内容跟 `GENERATING_EPISODE_DATA.md` 一致，克隆下来后会在你说"做新一集数据"之类的话时自动生效，不需要手动把文档粘贴给它。
+如果你用的是 Claude Code，这个仓库还自带了一个对应的 Skill（[`.claude/skills/zhuiju-xue-deyu/`](.claude/skills/zhuiju-xue-deyu/SKILL.md)），内容跟 `GENERATING_EPISODE_DATA.md` 一致，克隆下来后会在你说"做新一集数据"之类的话时自动生效，不需要手动把文档粘贴给它。
 
 ## 多集设置
 
