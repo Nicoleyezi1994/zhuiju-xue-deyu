@@ -622,6 +622,15 @@ function highlightText(text){
   return {html, vocabIds};
 }
 
+// 找到某个生词在字幕里第一次出现的那条cue，用于"点击生词→跳转到视频对应时间点"
+function findFirstCueForVocab(id){
+  for(const c of CUES){
+    if(c.sfx || !c.text || !c.text.trim()) continue;
+    if(highlightText(c.text).vocabIds.has(id)) return c;
+  }
+  return null;
+}
+
 /* ---------- Subtitle sync ---------- */
 const subtitleBox = document.getElementById('subtitleBox');
 const cueVocabCard = document.getElementById('cueVocabCard');
@@ -868,6 +877,13 @@ function renderVocabGrid(){
       if(e.target.closest('[data-speak]')) return;
       document.querySelector('nav.tabs button[data-tab="player"]').click();
       showVocabDetail(v.id);
+      if(video.src){
+        const cue = findFirstCueForVocab(v.id);
+        if(cue){
+          video.pause();
+          video.currentTime = cue.start/1000;
+        }
+      }
     });
     grid.appendChild(el);
   });
