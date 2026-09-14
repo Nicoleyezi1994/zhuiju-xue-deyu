@@ -44,7 +44,7 @@ def check(ep):
     phrase_matches = []
     for v in data['vocab']:
         for m in v.get('match', []):
-            if ' ' in m:
+            if ' ' in m or '-' in m:
                 phrase_matches.append((m.lower(), v['id']))
             else:
                 word_map[m.lower()] = v['id']

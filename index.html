@@ -386,7 +386,7 @@ function initEpisode(data, entry){
   phraseMatches = [];
   VOCAB.forEach(v=>{
     (v.match || []).forEach(m=>{
-      if(m.includes(' ')) phraseMatches.push({phrase:m.toLowerCase(), id:v.id});
+      if(m.includes(' ') || m.includes('-')) phraseMatches.push({phrase:m.toLowerCase(), id:v.id});
       else wordMap[m.toLowerCase()] = v.id;
     });
   });
